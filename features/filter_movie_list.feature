@@ -27,7 +27,7 @@ Feature: display list of movies filtered by MPAA rating
     Then I should see the following movies: The Incredibles, Raiders of the Lost Ark, The Terminator, When Harry Met Sally, Amelie
     And I should not see the following movies: Aladdin, 2001: A Space Odyssey, Chicken Run, Chocolat, The Help
 
-  Scenario: all ratings selected shows all movies
-    When I check the following ratings: G, PG, PG-13, R
-    And I press "Refresh"
+  Scenario: all ratings selected
+    Given I check the following ratings: G, PG, PG-13, R
+    When I press "Refresh"
     Then I should see all the movies
