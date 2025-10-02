@@ -6,28 +6,43 @@ class MoviesController < ApplicationController
     @all_ratings = Movie.all_ratings
   
     raw_ratings = params[:ratings]
+    raw_ratings = raw_ratings.keys if raw_ratings.is_a?(ActionController::Parameters) || raw_ratings.is_a?(Hash)
+    selected_ratings = Array(raw_ratings).reject(&:blank?) if raw_ratings.present?
   
-    raw_ratings = raw_ratings.keys if raw_ratings.is_a?(ActionController::Parameters) ||
-                                      raw_ratings.is_a?(Hash)
+    @ratings_to_show = selected_ratings.presence || session[:ratings] || @all_ratings
   
-    if raw_ratings.present?
-      @ratings_to_show = Array(raw_ratings).reject(&:blank?)
-      session[:ratings] = @ratings_to_show
+    sort_param = (params[:sort] || params[:sort_by]).presence_in(%w[title release_date])
+    @sort = sort_param || session[:sort] 
+  
+    needs_redirect = false
+    query = {}
+  
+    unless params[:ratings].present?
+      needs_redirect = true
+      query[:ratings] = Hash[@ratings_to_show.map { |r| [r, 1] }]
     else
-      @ratings_to_show = session[:ratings] || @all_ratings
+      query[:ratings] = params[:ratings]
     end
   
-    sort_param = params[:sort_by].presence_in(%w[title release_date])
-  
-    if sort_param
-      @sort_by = sort_param
-      session[:sort_by] = @sort_by
+    unless params[:sort].present?
+      needs_redirect = true if @sort.present?
+      query[:sort] = @sort if @sort.present?
     else
-      @sort_by = session[:sort_by] || "title"
+      query[:sort] = params[:sort]
     end
   
-    @movies = Movie.with_ratings(@ratings_to_show, @sort_by)
+    if needs_redirect
+      flash.keep
+      return redirect_to movies_path(query)
+    end
+  
+    session[:ratings] = @ratings_to_show
+    session[:sort]     = @sort
+  
+    @movies = Movie.where(rating: @ratings_to_show)
+    @movies = @movies.order(@sort) if @sort.present?
   end
+  
   
 
   # GET /movies/1 or /movies/1.json

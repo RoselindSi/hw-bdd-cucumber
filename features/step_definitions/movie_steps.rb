@@ -1,45 +1,92 @@
-# Add a declarative step here for populating the DB with movies.
+# features/step_definitions/movie_steps.rb
 
+# ------------------------------------------------------------
+# Add a declarative step here for populating the DB with movies.
+# ------------------------------------------------------------
 Given(/the following movies exist/) do |movies_table|
-  movies_table.hashes.each do |movie|
-    # each returned element will be a hash whose key is the table header.
-    # you should arrange to add that movie to the database here.
+  # Keep scenarios isolated: start from a clean DB (for Movies).
+  # Background runs before each scenario. Without this, rows would
+  # accumulate across scenarios and "n seed movies should exist" would fail.
+  Movie.delete_all
+
+  # movies_table.hashes => Array of Hashes, e.g.
+  # { "title" => "Alien", "rating" => "R", "release_date" => "1979-05-25" }
+  movies_table.hashes.each do |row|
+    Movie.create!(row)  # raise on invalid input (helps catch typos early)
   end
-  pending "Fill in this step in movie_steps.rb"
+
+  # Optional debug to Cucumber log
+  log "Seeded #{Movie.count} movies: #{Movie.pluck(:title).join(', ')}"
 end
 
 Then(/(.*) seed movies should exist/) do |n_seeds|
   expect(Movie.count).to eq n_seeds.to_i
 end
 
+# ------------------------------------------------------------
 # Make sure that one string (regexp) occurs before or after another one
-#   on the same page
-
+# on the same page (specifically within the movie list table).
+# ------------------------------------------------------------
 Then(/^I should see "(.*)" before "(.*)" in the movie list$/) do |e1, e2|
-  #  ensure that that e1 occurs before e2.
-  #  page.body is the entire content of the page as a string.
-  pending "Fill in this step in movie_steps.rb"
+  # Narrow the search to the movies table to avoid false positives
+  # from other parts of the page.
+  within('table#movies') do
+    body_text = page.text
+    i1 = body_text.index(e1)
+    i2 = body_text.index(e2)
+    expect(i1).not_to be_nil, %(Expected to find "#{e1}" in the movie list)
+    expect(i2).not_to be_nil, %(Expected to find "#{e2}" in the movie list)
+    expect(i1).to be < i2, %(Expected "#{e1}" to appear before "#{e2}" in the movie list)
+  end
 end
 
-
-# Make it easier to express checking or unchecking several boxes at once
-#  "When I check only the following ratings: PG, G, R"
-
+# ------------------------------------------------------------
+# Make it easier to express checking several boxes at once:
+#   When I check the following ratings: PG, G, R
+# ------------------------------------------------------------
 When(/I check the following ratings: (.*)/) do |rating_list|
-  # HINT: use String#split to split up the rating_list, then
-  #   iterate over the ratings and reuse the "When I check..." or
-  #   "When I uncheck..." steps in lines 89-95 of web_steps.rb
-  pending "Fill in this step in movie_steps.rb"
+  ratings = rating_list.split(/\s*,\s*/).reject(&:blank?)
+  ratings.each do |r|
+    # IDs are "ratings_G", "ratings_PG", etc. This matches canonical views.
+    step %Q{I check "ratings_#{r}"}
+  end
 end
 
+
+When(/I uncheck the following ratings: (.*)/) do |rating_list|
+  rating_list.split(/\s*,\s*/).each do |r|
+    step %Q{I uncheck "ratings_#{r}"}
+  end
+end
+# ------------------------------------------------------------
+# Verify presence/absence of a set of movie titles on the page.
+# Example:
+#   Then I should see the following movies: Alien, Up
+#   Then I should not see the following movies: Toy Story, Jaws
+# ------------------------------------------------------------
 Then(/^I should (not )?see the following movies: (.*)$/) do |no, movie_list|
-  # Take a look at web_steps.rb Then /^(?:|I )should see "([^"]*)"$/
-  pending "Fill in this step in movie_steps.rb"
+  titles = movie_list.split(/\s*,\s*/).reject(&:blank?)
+  within('table#movies, #movies') do
+    titles.each do |title|
+      if no
+        expect(page).not_to have_text(title)
+      else
+        expect(page).to have_text(title)
+      end
+    end
+  end
 end
 
+# ------------------------------------------------------------
+# Ensure all movies in the DB are visible in the table.
+# This assumes one <tr> per movie in <table id="movies"> <tbody>.
+# ------------------------------------------------------------
 Then(/^I should see all the movies$/) do
-  # Make sure that all the movies in the app are visible in the table
-  pending "Fill in this step in movie_steps.rb"
+  within('table#movies tbody') do
+    rows = all('tr').size
+    expect(rows).to eq(Movie.count),
+      "Expected #{Movie.count} rows in the movies table, found #{rows}"
+  end
 end
 
 ### Utility Steps Just for this assignment.
@@ -62,4 +109,11 @@ Then(/complete the rest of of this scenario/) do
   # You should leave this block inside movie_steps, but replace
   # the line in your scenarios with the appropriate steps.
   raise "Remove this step from your .feature files"
+end
+
+Then('the {string} should be highlighted') do |header_id|
+  th = find("##{header_id}")
+  # Ensure the class attribute contains 'hilite'
+  classes = th[:class].to_s.split(/\s+/)
+  expect(classes).to include('hilite'), %(Expected ##{header_id} to have class "hilite", got "#{th[:class]}")
 end
