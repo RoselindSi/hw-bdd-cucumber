@@ -117,3 +117,22 @@ Then('the {string} should be highlighted') do |header_id|
   classes = th[:class].to_s.split(/\s+/)
   expect(classes).to include('hilite'), %(Expected ##{header_id} to have class "hilite", got "#{th[:class]}")
 end
+
+# Allow a generic order assertion without scoping phrase:
+#   Then I should see "Aladdin" before "Amelie"
+# If the movies table exists, scope to it; otherwise use the whole page text.
+Then(/^I should see "(.*)" before "(.*)"$/) do |e1, e2|
+  text_source =
+    if page.has_css?('table#movies')
+      find('table#movies').text
+    else
+      page.text
+    end
+
+  i1 = text_source.index(e1)
+  i2 = text_source.index(e2)
+
+  expect(i1).not_to be_nil, %(Expected to find "#{e1}" on the page)
+  expect(i2).not_to be_nil, %(Expected to find "#{e2}" on the page)
+  expect(i1).to be < i2, %(Expected "#{e1}" to appear before "#{e2}")
+end

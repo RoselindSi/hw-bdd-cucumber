@@ -22,12 +22,12 @@ Feature: display list of movies sorted by different criteria
 
   Scenario: sort movies alphabetically by title
     When I follow "Movie Title"
-    Then I should see "2001: A Space Odyssey" before "Aladdin" in the movie list
-    And I should see "Aladdin" before "Amelie" in the movie list
+    Then I should see "2001: A Space Odyssey" before "Aladdin"
+    And I should see "Aladdin" before "Amelie"
     And the "title_header" should be highlighted
 
   Scenario: sort movies by increasing release date
     When I follow "Release Date"
-    Then I should see "2001: A Space Odyssey" before "Raiders of the Lost Ark" in the movie list
-    And I should see "Raiders of the Lost Ark" before "The Terminator" in the movie list
+    Then I should see "2001: A Space Odyssey" before "Raiders of the Lost Ark"
+    And I should see "Raiders of the Lost Ark" before "The Terminator"
     And the "release_date_header" should be highlighted
